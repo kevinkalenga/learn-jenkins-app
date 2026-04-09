@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     stages {
-        // this is a comment
         stage('Build') {
             agent {
                 docker {
@@ -34,7 +33,7 @@ pipeline {
                     steps {
                         sh '''
                           npm ci
-                          test -f build/index.html
+                          test -f build/index.html || { echo "❌ Build missing!"; exit 1; }
                           CI=true npm test
                         '''
                     }
@@ -51,30 +50,35 @@ pipeline {
                             npm ci
                             npm install -g serve
 
-                            # start server
+                            # Vérifier que le build existe
+                            test -f build/index.html || { echo "❌ Build missing!"; exit 1; }
+
+                            # Démarrer le serveur
                             npx serve -s build -l 3000 &
                             SERVER_PID=$!
 
-                            # attendre que le serveur soit vraiment prêt
+                            # Attendre que le serveur soit vraiment prêt
                             echo "Waiting for server..."
-                            for i in {1..20}; do
-                            curl -s -o /dev/null http://localhost:3000 && break
-                            sleep 1
+                            for i in {1..30}; do
+                              STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000)
+                              if [ "$STATUS" -eq 200 ]; then
+                                echo "Server ready ✅"
+                                break
+                              fi
+                              sleep 1
                             done
 
-                            # run tests
+                            # Lancer les tests Playwright
                             npx playwright test --reporter=html
 
-                            # stop server
+                            # Arrêter le serveur
                             kill $SERVER_PID
                         '''
                     }
                 }
-
             }
         }
 
-        
         stage('Install') {
             agent {
                docker {
@@ -91,7 +95,17 @@ pipeline {
     post {
         always {
             junit 'jest-results/junit.xml'
-            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+            publishHTML([
+                allowMissing: false,
+                alwaysLinkToLastBuild: false,
+                icon: '',
+                keepAll: false,
+                reportDir: 'playwright-report',
+                reportFiles: 'index.html',
+                reportName: 'Playwright HTML Report',
+                reportTitles: '',
+                useWrapperFileDirectly: true
+            ])
         }
     }
 }
