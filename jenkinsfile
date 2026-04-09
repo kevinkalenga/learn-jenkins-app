@@ -18,6 +18,7 @@ pipeline {
                    npm run build 
                    ls -la
                 '''
+                stash name: 'build', includes: 'build/**'
             }
         }
 
@@ -46,6 +47,7 @@ pipeline {
                         }
                     }
                     steps {
+                        unstash 'build'
                         sh '''
                             npm ci
                             npm install -g serve
