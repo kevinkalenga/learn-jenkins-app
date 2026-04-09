@@ -41,7 +41,6 @@ pipeline {
                 docker {
                     image 'mcr.microsoft.com/playwright:v1.39.2-noble'
                     reuseNode true
-                    
                 }
             }
             steps {
@@ -49,17 +48,27 @@ pipeline {
                   npm ci
 
                   npx playwright install --with-deps
-                  
+          
                   npm install serve 
-                  
-                  node_modules/serve & 
-                  sleep 5
+
+                  # lancer correctement le serveur
+                  npx serve -s build -l 3000 &
+
+                  # attendre que le serveur soit vraiment prêt
+                  sleep 10
+
                   npx playwright test
                 '''
             }
         }
 
         stage('Install') {
+            agent {
+               docker {
+                   image 'mcr.microsoft.com/playwright:v1.39.2-noble'
+                   reuseNode true
+               }
+            }
             steps {
               sh 'npm install'
               sh 'npx playwright install --with-deps'
