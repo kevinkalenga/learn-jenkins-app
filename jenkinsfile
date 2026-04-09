@@ -55,6 +55,9 @@ pipeline {
 
                           # lancer correctement le serveur
                           npx serve -s build -l 3000 &
+                          SERVER_PID=$!
+
+                          echo "Server PID: $SERVER_PID"
 
                           # attendre que le serveur soit vraiment prêt
                           sleep 10
@@ -63,7 +66,9 @@ pipeline {
 
                           npx playwright test --reporter=html
 
-                          kill $SERVER_PID
+                          if [ -n "$SERVER_PID" ]; then
+                             kill $SERVER_PID
+                          fi
                         '''
                     }
                 }
