@@ -22,48 +22,54 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            agent {
-                docker {
-                    image 'node:18-alpine'
-                    reuseNode true
+        stage('Tests') {
+            parallel {
+                stage('Unit tests') {
+                    agent {
+                        docker {
+                            image 'node:18-alpine'
+                            reuseNode true
+                        }
+                    }
+                    steps {
+                        sh '''
+                          test -f build/index.html
+                          npm test
+                        '''
+                    }
                 }
-            }
-            steps {
-                sh '''
-                  test -f build/index.html
-                  npm test
-                '''
-            }
-        }
-        stage('E2E') {
-            agent {
-                docker {
-                    image 'mcr.microsoft.com/playwright:v1.58.2-noble'
-                    reuseNode true
-                }
-            }
-            steps {
-                sh '''
-                  npm ci
+                stage('E2E') {
+                    agent {
+                        docker {
+                            image 'mcr.microsoft.com/playwright:v1.58.2-noble'
+                            reuseNode true
+                        }
+                    }
+                    steps {
+                        sh '''
+                          npm ci
 
-                  npx playwright install
+                          npx playwright install
           
-                  npm install serve 
+                          npm install serve 
 
-                  # lancer correctement le serveur
-                  npx serve -s build -l 3000 &
+                          # lancer correctement le serveur
+                          npx serve -s build -l 3000 &
 
-                  # attendre que le serveur soit vraiment prêt
-                  sleep 10
+                          # attendre que le serveur soit vraiment prêt
+                          sleep 10
 
-                  curl -I http://localhost:3000 || exit 1
+                          curl -I http://localhost:3000 || exit 1
 
-                  npx playwright test --reporter=html
-                '''
+                          npx playwright test --reporter=html
+                        '''
+                    }
+                }
+
             }
         }
 
+        
         stage('Install') {
             agent {
                docker {
