@@ -70,3 +70,10 @@ module.exports = defineConfig({
   // },
 });
 
+module.exports = {
+  reporter: [
+    ['list'],
+    ['junit', { outputFile: 'results.xml' }]
+  ],
+};
+

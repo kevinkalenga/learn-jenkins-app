@@ -46,9 +46,14 @@ pipeline {
             }
             steps {
                 sh '''
+                  npm ci
+
+                  npx playwright install --with-deps
+                  
                   npm install serve 
+                  
                   node_modules/serve & 
-                  sleep 10
+                  sleep 5
                   npx playwright test
                 '''
             }
