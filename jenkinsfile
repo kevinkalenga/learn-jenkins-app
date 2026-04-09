@@ -62,6 +62,8 @@ pipeline {
                           curl -I http://localhost:3000 || exit 1
 
                           npx playwright test --reporter=html
+
+                          kill $SERVER_PID
                         '''
                     }
                 }
