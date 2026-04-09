@@ -33,6 +33,7 @@ pipeline {
                     }
                     steps {
                         sh '''
+                          npm ci
                           test -f build/index.html
                           CI=true npm test
                         '''
@@ -48,27 +49,20 @@ pipeline {
                     steps {
                         sh '''
                           npm ci
-
-                          npx playwright install
           
                           npm install serve 
 
                           # lancer correctement le serveur
                           npx serve -s build -l 3000 &
                           SERVER_PID=$!
-
-                          echo "Server PID: $SERVER_PID"
-
-                          # attendre que le serveur soit vraiment prêt
-                          sleep 10
+                          
+                          sleep 5
 
                           curl -I http://localhost:3000 || exit 1
 
                           npx playwright test --reporter=html
 
-                          if [ -n "$SERVER_PID" ]; then
-                             kill $SERVER_PID
-                          fi
+                           kill $SERVER_PID
                         '''
                     }
                 }
