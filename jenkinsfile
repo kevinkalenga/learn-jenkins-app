@@ -47,7 +47,7 @@ pipeline {
                 sh '''
                   npm ci
 
-                  npx playwright install --with-deps
+                  npx playwright install
           
                   npm install serve 
 
@@ -57,6 +57,8 @@ pipeline {
                   # attendre que le serveur soit vraiment prêt
                   sleep 10
 
+                  curl -I http://localhost:3000 || exit 1
+
                   npx playwright test
                 '''
             }
@@ -65,13 +67,12 @@ pipeline {
         stage('Install') {
             agent {
                docker {
-                   image 'mcr.microsoft.com/playwright:v1.39.2-noble'
+                   image 'node:18-alpine'
                    reuseNode true
                }
             }
             steps {
-              sh 'npm install'
-              sh 'npx playwright install --with-deps'
+              sh 'npm ci'
             }
         }
     }
