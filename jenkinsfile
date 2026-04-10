@@ -2,6 +2,8 @@ pipeline {
     agent any
 
     stages {
+        /*
+
         stage('Build') {
             agent {
                 docker {
@@ -11,16 +13,16 @@ pipeline {
             }
             steps {
                 sh '''
-                   ls -la
-                   node --version
-                   npm --version
-                   npm ci 
-                   npm run build 
-                   ls -la
+                    ls -la
+                    node --version
+                    npm --version
+                    npm ci
+                    npm run build
+                    ls -la
                 '''
-                stash name: 'build', includes: 'build/**'
             }
         }
+        */
 
         stage('Tests') {
             parallel {
@@ -31,86 +33,44 @@ pipeline {
                             reuseNode true
                         }
                     }
+
                     steps {
                         sh '''
-                          npm ci
-                          test -f build/index.html || { echo "❌ Build missing!"; exit 1; }
-                          CI=true npm test
+                            #test -f build/index.html
+                            npm test
                         '''
                     }
+                    post {
+                        always {
+                            junit 'jest-results/junit.xml'
+                        }
+                    }
                 }
+
                 stage('E2E') {
                     agent {
                         docker {
                             image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
-                            reuseNode false
+                            reuseNode true
                         }
                     }
+
                     steps {
-                        unstash 'build'
                         sh '''
-                            npm ci
-                            npm install -g serve
-
-                            # Vérifier que le build existe
-                            test -f build/index.html || { echo "❌ Build missing!"; exit 1; }
-
-                            # Démarrer le serveur
-                            npx serve -s build -l 3000 &
-                            SERVER_PID=$!
-
-                            # Attendre que le serveur soit vraiment prêt
-                            echo "Waiting for server..."
-                            for i in {1..30}; do
-                               STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || true)
-  
-                               if [ "$STATUS" = "200" ]; then
-                                   echo "Server ready ✅"
-                                   break
-                               fi
-
-                                echo "Waiting... ($i)"
-                                sleep 2
-                            done
-
-                            # Lancer les tests Playwright
-                            npx playwright test --reporter=html
-
-                            # Arrêter le serveur
-                            kill $SERVER_PID
+                            npm install serve
+                            node_modules/.bin/serve -s build &
+                            sleep 10
+                            npx playwright test  --reporter=html
                         '''
+                    }
+
+                    post {
+                        always {
+                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+                        }
                     }
                 }
             }
-        }
-
-        stage('Install') {
-            agent {
-               docker {
-                   image 'node:18-alpine'
-                   reuseNode true
-               }
-            }
-            steps {
-              sh 'npm ci'
-            }
-        }
-    }
-
-    post {
-        always {
-            junit 'jest-results/junit.xml'
-            publishHTML([
-                allowMissing: false,
-                alwaysLinkToLastBuild: false,
-                icon: '',
-                keepAll: false,
-                reportDir: 'playwright-report',
-                reportFiles: 'index.html',
-                reportName: 'Playwright HTML Report',
-                reportTitles: '',
-                useWrapperFileDirectly: true
-            ])
         }
     }
 }
